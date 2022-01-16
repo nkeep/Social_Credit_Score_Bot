@@ -69,8 +69,8 @@ class General(Cog):
         # print(message.reactions)
         for item in message.reactions:
             try:
-                if "mangoTYPERS" == item.emoji.name or "mangoReddit" == item.emoji.name:
-                    if item.count >= 1:
+                if "rt" == item.emoji.name or "TRUE" == item.emoji.name:
+                    if item.count >= 4:
                         if change_credit_for_message(5, reaction.message.author.id, message.id):
                             await reaction.message.channel.send(f"{reaction.message.author.name} gained 5 social credit!")
             except Exception as e:
