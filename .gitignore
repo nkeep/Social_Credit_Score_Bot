@@ -1,0 +1,6 @@
+*.db
+*.db-journal
+__pycache__
+*.txt
+config.py
+nohup.out
