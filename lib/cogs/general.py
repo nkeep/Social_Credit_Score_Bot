@@ -68,14 +68,12 @@ class General(Cog):
                     await ctx.message.add_reaction("✅")
                     await ctx.message.add_reaction("❌")
                     now = datetime.now()
-                    # future = now + timedelta(hours=2)
-                    future = now + timedelta(minutes=1)
-                    print(type(future))
+                    future = now + timedelta(hours=2)
+                    # future = now + timedelta(minutes=1)
                     job = self.bot.scheduler.add_job(self.determine_ratio, CronTrigger(month=future.month, day=future.day, hour=future.hour, minute=future.minute), [ctx.channel, ctx.message.id], id=str(ctx.message.id))
                     #Remove any scores previously gained from these messages and set the points awarded to -1
                     message_1 = db.record(f"SELECT * FROM messages WHERE id = {ctx.message.id}")
                     if message_1:
-                        print(message_1)
                         db.execute(f"UPDATE members SET score = score - {message_1[2]} WHERE id = {ctx.author.id}")
                         db.execute(f"UPDATE messages SET points_awarded = -1 WHERE id = {ctx.message.id}")
                     else:
@@ -83,7 +81,6 @@ class General(Cog):
 
                     message_2 = db.record(f"SELECT * FROM messages WHERE id = {ctx.message.reference.message_id}")
                     if message_2:
-                        print(message_2)
                         db.execute(f"UPDATE members SET score = score - {message_2[2]} WHERE id = {ctx.message.reference.resolved.author.id}") #?????? could be wrong
                         db.execute(f"UPDATE messages SET points_awarded = -1 WHERE id = {ctx.message.reference.message_id}")
                     else:
@@ -106,11 +103,11 @@ class General(Cog):
 
         net = upvotes - downvotes
         print(net)
-        if net > 0:
+        if net > 1:
             update_score(reaction_scaling[net-1], message.author)
             update_score(-1 * reaction_scaling[net-1], message.reference.resolved.author)
             await channel.send(f"{message.author.name} ratio'd {message.reference.resolved.author.name} and gained {str(reaction_scaling[net-1])} social credit! {message.reference.resolved.author.name} lost {str(reaction_scaling[net-1])} social credit")
-        elif net < 0:
+        elif net < -1:
             update_score(-1 * reaction_scaling[net-1], message.author)
             update_score(reaction_scaling[net-1], message.reference.resolved.author)
             await channel.send(f"{message.author.name} failed to ratio {message.reference.resolved.author.name} and lost {str(reaction_scaling[net-1])} social credit! {message.reference.resolved.author.name} gained {str(reaction_scaling[net-1])} social credit!")
@@ -129,7 +126,6 @@ class General(Cog):
 
     @Cog.listener()
     async def on_reaction_add(self, reaction, user):
-        self.bot.scheduler.print_jobs()
         if not user.bot:
             message = reaction.message
             prev_score = None
