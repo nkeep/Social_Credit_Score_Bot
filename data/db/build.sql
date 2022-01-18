@@ -11,5 +11,7 @@ CREATE TABLE IF NOT EXISTS members(
 );
 
 CREATE TABLE IF NOT EXISTS messages(
-	id bigint PRIMARY KEY
+	id bigint PRIMARY KEY,
+	user_id bigint,
+	points_awarded int
 );
