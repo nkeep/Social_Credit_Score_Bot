@@ -27,16 +27,44 @@ class General(Cog):
     def __init__(self, bot):
     	self.bot = bot
 
-    @command(name="updatescore", aliases=["addscore", "subtractscore"])
-    async def updatescore(self, ctx, num, member: Member):
+
+    @command(name="rules")
+    async def rules(self, ctx):
         try:
-            if ctx.author.id in credit_score_mods:
-                score = update_score(int(num), member)
-                await ctx.send(f"{member.name}'s score is now {str(score)}!")
-            else:
-                await ctx.send("You must be a moderator of John Xina's army to use this command")
+            pos_rules = db.records(f"SELECT * FROM rules WHERE value > 0")
+            neg_rules = db.records(f"SELECT * FROM rules WHERE value < 0")
+            text = "DOs: \n"
+            for i in range(len(pos_rules)):
+                text += str(i+1) + ". " + "+" + str(pos_rules[i][0]) + " " + pos_rules[i][1] + "\n"
+
+            text += "DON'Ts: \n"
+
+            for j in range(len(neg_rules)):
+                text += str(i+2+j) + ". " + str(neg_rules[j][0]) + " " + neg_rules[j][1] + "\n"
+
+            await ctx.send(f"```{text}```")
         except Exception as e:
-            print(e)
+            await ctx.send("Command failed")
+
+    @command(name="addrule")
+    async def add_rule(self, ctx, value, *, rule):
+        try:
+            if value != 0 and int(value) >= -30 and int(value) <= 30:
+                db.execute(f"INSERT INTO RULES(value, rule) VALUES({int(value)}, '{rule}')")
+                await ctx.send("Successfully added rule")
+        except Exception as e:
+            await ctx.send("Invalid point value")
+
+    @command(name="removerule")
+    async def remove_rule(self, ctx, num):
+        try:
+            rules = db.records(f"SELECT * FROM rules WHERE value > 0") + db.records(f"SELECT * FROM rules WHERE value < 0")
+            print(rules)
+            rule = rules[int(num)-1][1]
+            db.execute(f"DELETE FROM rules WHERE rule = '{rule}'")
+            await ctx.send("Successfully removed rule")
+        except Exception as e:
+            await ctx.send("Failed to remove rule")
 
     @command(name="scores")
     async def scores(self, ctx):
@@ -59,6 +87,17 @@ class General(Cog):
             style=PresetStyle.thin_compact
         )
         await ctx.send(f"```\n{output}\n```")
+
+    @command(name="updatescore", aliases=["addscore", "subtractscore"])
+    async def updatescore(self, ctx, num, member: Member):
+        try:
+            if ctx.author.id in credit_score_mods:
+                score = update_score(int(num), member)
+                await ctx.send(f"{member.name}'s score is now {str(score)}!")
+            else:
+                await ctx.send("You must be a moderator of John Xina's army to use this command")
+        except Exception as e:
+            print(e)
 
     @command(name="ratio")
     async def ratio(self, ctx):

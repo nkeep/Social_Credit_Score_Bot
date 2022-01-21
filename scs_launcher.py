@@ -6,3 +6,4 @@ bot.run(VERSION)
 
 #Version Notes
 #1.1    Add ratio command
+#1.2    Add rules commands (rules, addrule, removerule)

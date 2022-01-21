@@ -15,3 +15,8 @@ CREATE TABLE IF NOT EXISTS messages(
 	user_id bigint,
 	points_awarded int
 );
+
+CREATE TABLE IF NOT EXISTS rules(
+	value int,
+	rule text PRIMARY KEY
+);
