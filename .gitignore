@@ -5,3 +5,6 @@ __pycache__
 scs-env/
 config.py
 nohup.out
+
+#Allow
+!requirements.txt
