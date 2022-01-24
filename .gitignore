@@ -2,5 +2,9 @@
 *.db-journal
 __pycache__
 *.txt
+scs-env/
 config.py
 nohup.out
+
+#Allow
+!requirements.txt
