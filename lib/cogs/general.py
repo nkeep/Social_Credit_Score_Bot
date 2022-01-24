@@ -18,6 +18,8 @@ THIS_FOLDER = os.path.dirname(os.path.abspath(__file__))
 files = os.path.join(THIS_FOLDER, ".." + path_separator + "files" + path_separator + "db" + path_separator)
 
 credit_score_mods = [143919895694802944, #Nate Keep
+                    144128948685504521, #Modifyed
+                    143933191948992512 #Jasho
                     ]
 
 reaction_scaling = [0,1,1,2,3,5,8,13,21,34,55,89,144,233]
@@ -172,7 +174,7 @@ class General(Cog):
             try:
                 prev_score = db.record(f"SELECT * FROM messages WHERE id = {message.id}")[2]
             except:
-                pass
+                print("no record found")
 
             if prev_score != -1: #If the score is -1, then this message is disabled (It might be part of a 'ratio' or something else)
                 highest_reaction_count = 0
@@ -182,14 +184,14 @@ class General(Cog):
                             if item.count > highest_reaction_count:
                                 highest_reaction_count = item.count
                     except:
-                        pass
+                        print("emoji not found")
 
                 if highest_reaction_count: #Update the user's score based on the reaction_scaling table
                     if prev_score == None:
-                        db.execute(f"INSERT INTO messages VALUES ({message.id}, {user.id}, {reaction_scaling[highest_reaction_count-1]})")
+                        db.execute(f"INSERT INTO messages VALUES ({message.id}, {message.author.id}, {reaction_scaling[highest_reaction_count-1]})")
                     else:
                         db.execute(f"UPDATE messages SET points_awarded = {reaction_scaling[highest_reaction_count-1]} WHERE id = {message.id}")
-                        db.execute(f"UPDATE members SET score = score + {reaction_scaling[highest_reaction_count-1] - prev_score} WHERE id = {user.id}")
+                        db.execute(f"UPDATE members SET score = score + {reaction_scaling[highest_reaction_count-1] - prev_score} WHERE id = {message.author.id}")
 
 
 
@@ -211,7 +213,7 @@ def update_score(num, member):
         record = db.record(f"SELECT score, level FROM members WHERE id = {member.id}")
         if record:
             db.execute(f"UPDATE members SET score= score + {num} WHERE id = {member.id}")
-            return record[0]
+            return record[0] + num
         else:
             add_user(member.id, 1000+num)
             return (1000+num)
