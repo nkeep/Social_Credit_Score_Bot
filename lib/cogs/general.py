@@ -106,7 +106,7 @@ class General(Cog):
     async def ratio(self, ctx):
         try:
             if ctx.message.reference: #What the message is replying to
-                if ctx.author.id != ctx.message.reference.resolved.author.id or not ctx.message.reference.resolved.author.bot:
+                if ctx.author.id != ctx.message.reference.resolved.author.id and not ctx.message.reference.resolved.author.bot:
                     await ctx.message.add_reaction("✅")
                     await ctx.message.add_reaction("❌")
                     now = datetime.now()
