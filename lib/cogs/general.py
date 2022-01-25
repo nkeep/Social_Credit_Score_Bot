@@ -52,7 +52,8 @@ class General(Cog):
     async def add_rule(self, ctx, value, *, rule):
         try:
             if value != 0 and int(value) >= -30 and int(value) <= 30:
-                db.execute(f"INSERT INTO RULES(value, rule) VALUES({int(value)}, '{rule}')")
+                rule = rule.replace("'", r"\'")
+                db.execute(f"INSERT INTO RULES(value, rule) VALUES({int(value)}, E'{rule}')")
                 await ctx.send("Successfully added rule")
         except Exception as e:
             await ctx.send("Invalid point value")
