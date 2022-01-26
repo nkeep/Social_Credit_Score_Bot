@@ -143,16 +143,16 @@ class General(Cog):
             elif item.emoji == "❌":
                 downvotes = item.count
 
-        net = abs(upvotes - downvotes)
+        net = upvotes - downvotes
         print(net)
         if net > 1:
             update_score(reaction_scaling[net], message.author)
             update_score(-1 * reaction_scaling[net], message.reference.resolved.author)
             await channel.send(f"{message.author.name} ratio'd {message.reference.resolved.author.name} and gained {str(reaction_scaling[net])} social credit! {message.reference.resolved.author.name} lost {str(reaction_scaling[net])} social credit")
         elif net < -1:
-            update_score(-1 * reaction_scaling[net], message.author)
-            update_score(reaction_scaling[net], message.reference.resolved.author)
-            await channel.send(f"{message.author.name} failed to ratio {message.reference.resolved.author.name} and lost {str(reaction_scaling[net])} social credit! {message.reference.resolved.author.name} gained {str(reaction_scaling[net])} social credit!")
+            update_score(-1 * reaction_scaling[abs(net)], message.author)
+            update_score(reaction_scaling[abs(net)], message.reference.resolved.author)
+            await channel.send(f"{message.author.name} failed to ratio {message.reference.resolved.author.name} and lost {str(reaction_scaling[abs(net)])} social credit! {message.reference.resolved.author.name} gained {str(reaction_scaling[abs(net)])} social credit!")
 
         else:
             await channel.send("There was either no ratio or not a big enough ratio")
