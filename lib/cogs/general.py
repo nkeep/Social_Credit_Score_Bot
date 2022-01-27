@@ -4,6 +4,8 @@ from discord.ext.commands import command, has_permissions
 from table2ascii import table2ascii as t2a, PresetStyle
 from apscheduler.triggers.cron import CronTrigger
 from datetime import datetime, timedelta
+from googletrans import Translator
+
 
 from ..db import db
 
@@ -23,6 +25,8 @@ credit_score_mods = [143919895694802944, #Nate Keep
                     ]
 
 reaction_scaling = [0,1,1,2,3,5,8,13,21,34,55,89,144,233]
+
+translator = Translator()
 
 
 class General(Cog):
@@ -46,7 +50,7 @@ class General(Cog):
 
             await ctx.send(f"```{text}```")
         except Exception as e:
-            await ctx.send("Command failed")
+            print(e)
 
     @command(name="addrule")
     async def add_rule(self, ctx, value, *, rule):
@@ -54,9 +58,9 @@ class General(Cog):
             if value != 0 and int(value) >= -30 and int(value) <= 30:
                 rule = rule.replace("'", r"\'")
                 db.execute(f"INSERT INTO RULES(value, rule) VALUES({int(value)}, E'{rule}')")
-                await ctx.send("Successfully added rule")
+                await send_message(ctx.channel, "Successfully added rule")
         except Exception as e:
-            await ctx.send("Invalid point value")
+            await send_message(ctx.channel, "Invalid point value")
 
     @command(name="removerule")
     async def remove_rule(self, ctx, num):
@@ -65,9 +69,20 @@ class General(Cog):
             print(rules)
             rule = rules[int(num)-1][1]
             db.execute(f"DELETE FROM rules WHERE rule = '{rule}'")
-            await ctx.send("Successfully removed rule")
+            await send_message(ctx.channel, "Successfully removed rule")
         except Exception as e:
-            await ctx.send("Failed to remove rule")
+            print(e)
+
+    @command(name="togglemandarin")
+    async def toggle_mandarin(self, ctx):
+        try:
+            if db.record(f"SELECT * FROM guilds WHERE GuildID = {ctx.guild.id}"):
+                db.execute(f"UPDATE guilds SET mandarinEnabled = NOT mandarinEnabled WHERE GuildID = {ctx.guild.id}")
+            else:
+                db.execute(f"INSERT INTO guilds(GuildID, mandarinEnabled) VALUES({ctx.guild.id}, TRUE)")
+            await send_message(ctx.channel, "Toggled Mandarin")
+        except Exception as e:
+            print(e)
 
     @command(name="scores")
     async def scores(self, ctx):
@@ -96,9 +111,9 @@ class General(Cog):
         try:
             if ctx.author.id in credit_score_mods:
                 score = update_score(int(num), member)
-                await ctx.send(f"{member.name}'s score is now {str(score)}!")
+                await send_message(ctx.channel, f"{member.name}'s score is now {str(score)}!")
             else:
-                await ctx.send("You must be a moderator of John Xina's army to use this command")
+                await send_message(ctx.channel, "You must be a moderator of John Xina's army to use this command")
         except Exception as e:
             print(e)
 
@@ -128,7 +143,7 @@ class General(Cog):
                     else:
                         db.execute(f"INSERT INTO messages VALUES ({ctx.message.reference.message_id}, {ctx.message.reference.resolved.author.id}, -1)")
                 else:
-                    await ctx.send("You cannot ratio yourself or a bot")
+                    await send_message(ctx.channel, "You cannot ratio yourself or a bot")
 
         except Exception as e:
             print(e)
@@ -148,14 +163,14 @@ class General(Cog):
         if net > 1:
             update_score(reaction_scaling[net], message.author)
             update_score(-1 * reaction_scaling[net], message.reference.resolved.author)
-            await channel.send(f"{message.author.name} ratio'd {message.reference.resolved.author.name} and gained {str(reaction_scaling[net])} social credit! {message.reference.resolved.author.name} lost {str(reaction_scaling[net])} social credit")
+            await send_message(channel, f"{message.author.name} ratioed {message.reference.resolved.author.name} and gained {str(reaction_scaling[net])} social credit! {message.reference.resolved.author.name} lost {str(reaction_scaling[net])} social credit")
         elif net < -1:
             update_score(-1 * reaction_scaling[abs(net)], message.author)
             update_score(reaction_scaling[abs(net)], message.reference.resolved.author)
-            await channel.send(f"{message.author.name} failed to ratio {message.reference.resolved.author.name} and lost {str(reaction_scaling[abs(net)])} social credit! {message.reference.resolved.author.name} gained {str(reaction_scaling[abs(net)])} social credit!")
+            await send_message(channel, f"{message.author.name} failed to ratio {message.reference.resolved.author.name} and lost {str(reaction_scaling[abs(net)])} social credit! {message.reference.resolved.author.name} gained {str(reaction_scaling[abs(net)])} social credit!")
 
         else:
-            await channel.send("There was either no ratio or not a big enough ratio")
+            await send_message(channel, "There was either no ratio or not a big enough ratio")
 
         self.bot.scheduler.remove_job(str(message.id))
 
@@ -164,7 +179,7 @@ class General(Cog):
     async def on_message(self, message):
         if re.search("(jonah)", message.content, re.IGNORECASE):
             update_score(-5, message.author)
-            await message.channel.send("Oh no, you said the bad word, -5 social credit")
+            await send_message(message.channel, "Oh no, you said the bad word, -5 social credit")
 
     @Cog.listener()
     async def on_reaction_add(self, reaction, user):
@@ -218,3 +233,11 @@ def update_score(num, member):
         else:
             add_user(member.id, 1000+num)
             return (1000+num)
+
+async def send_message(channel, message):
+    if db.record(f"SELECT mandarinEnabled FROM guilds WHERE guildID = {channel.guild.id}")[0]:
+        print(message)
+        text = translator.translate(message, dest="zh-cn")
+        await channel.send(text.text)
+    else:
+        await channel.send(message)

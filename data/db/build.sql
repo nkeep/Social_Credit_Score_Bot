@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS guilds (
 	GuildID bigint PRIMARY KEY,
-	Prefix text DEFAULT '+',
-	reminderchannel bigint
+	Prefix text DEFAULT '$',
+	mandarinEnabled boolean DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS members(
