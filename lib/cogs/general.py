@@ -36,14 +36,14 @@ translator = Translator()
 
 class General(Cog):
     def __init__(self, bot):
-    	self.bot = bot
+        self.bot = bot
         self.bot.scheduler.add_job(self.check_weekly_messages, CronTrigger.from_crontab('0 0 * * 0')) #Every sunday at midnight
 
     async def check_weekly_messages(self):
         members = db.records("SELECT * FROM members")
         for member in members:
             if not member[3]: #They haven't sent a message this week
-                update_score(-5, await self.bot.fetch_user(member[0]), self.bot.get_channel(505589070378958850))
+                await update_score(-5, await self.bot.fetch_user(member[0]), self.bot.get_channel(505589070378958850))
 
         db.execute(f"UPDATE members SET hasSentMessage = FALSE") #Set all members back to false
 
