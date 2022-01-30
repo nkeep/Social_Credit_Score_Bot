@@ -206,7 +206,7 @@ class General(Cog):
             try:
                 prev_score = db.record(f"SELECT * FROM messages WHERE id = {message.id}")[2]
             except:
-                print("no record found")
+                db.execute(f"INSERT INTO messages VALUES ({message.id}, 0)")
 
             if prev_score != None: #If the score is None, then this message is disabled (It might be part of a 'ratio' or something else)
                 highest_pos_reaction_count = 0
@@ -226,17 +226,11 @@ class General(Cog):
                 net_reaction = highest_pos_reaction_count - highest_neg_reaction_count
 
                 if net_reaction > 0: #Update the user's score based on the reaction_scaling table
-                    if prev_score == 0:
-                        db.execute(f"INSERT INTO messages VALUES ({message.id}, {message.author.id}, {reaction_scaling[net_reaction-1]})")
-                    else:
-                        db.execute(f"UPDATE messages SET points_awarded = {reaction_scaling[net_reaction-1]} WHERE id = {message.id}")
-                        db.execute(f"UPDATE members SET score = score + {reaction_scaling[net_reaction-1] - prev_score} WHERE id = {message.author.id}")
+                    db.execute(f"UPDATE messages SET points_awarded = {reaction_scaling[net_reaction-1]} WHERE id = {message.id}")
+                    db.execute(f"UPDATE members SET score = score + {reaction_scaling[net_reaction-1] - prev_score} WHERE id = {message.author.id}")
                 elif net_reaction < 0:
-                    if prev_score == 0:
-                        db.execute(f"INSERT INTO messages VALUES ({message.id}, {message.author.id}, {-1 * reaction_scaling[abs(net_reaction)-1]})")
-                    else:
-                        db.execute(f"UPDATE messages SET points_awarded = {-1 * reaction_scaling[abs(net_reaction)-1]} WHERE id = {message.id}")
-                        db.execute(f"UPDATE members SET score = score + {(-1 * reaction_scaling[abs(net_reaction)-1]) - prev_score} WHERE id = {message.author.id}")
+                    db.execute(f"UPDATE messages SET points_awarded = {-1 * reaction_scaling[abs(net_reaction)-1]} WHERE id = {message.id}")
+                    db.execute(f"UPDATE members SET score = score + {(-1 * reaction_scaling[abs(net_reaction)-1]) - prev_score} WHERE id = {message.author.id}")
                 print(net_reaction)
 
     @Cog.listener()
