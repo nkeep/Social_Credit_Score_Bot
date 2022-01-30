@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS guilds (
 CREATE TABLE IF NOT EXISTS members(
 	id bigint PRIMARY KEY,
 	score integer DEFAULT 1000,
-	level integer DEFAULT 3
+	level integer DEFAULT 3,
+	hasSentMessage boolean DEFAULT TRUE
 );
 
 CREATE TABLE IF NOT EXISTS messages(

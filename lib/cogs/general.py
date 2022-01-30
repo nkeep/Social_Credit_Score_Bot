@@ -9,6 +9,7 @@ from googletrans import Translator
 
 from ..db import db
 
+import math
 import re
 import os
 
@@ -25,6 +26,10 @@ credit_score_mods = [143919895694802944, #Nate Keep
                     ]
 
 reaction_scaling = [0,1,1,2,3,5,8,13,21,34,55,89,144,233]
+good_reactions = ["rt", "TRUE", "tjbased", "LOGGERS", "TJ"]
+bad_reactions = ["yaok", "yikes", "garbageTake", "papa", "dooziernotfunny"]
+
+levels = {-1:[-math.inf,299], 0:[300,499], 1:[500,699], 2:[700,899], 3:[900,1099], 4:[1100, 1299], 5:[1300, 1499], 6:[1500,1699], 7:[1700, math.inf]}
 
 translator = Translator()
 
@@ -32,7 +37,15 @@ translator = Translator()
 class General(Cog):
     def __init__(self, bot):
     	self.bot = bot
+        self.bot.scheduler.add_job(self.check_weekly_messages, CronTrigger.from_crontab('0 0 * * 0')) #Every sunday at midnight
 
+    async def check_weekly_messages(self):
+        members = db.records("SELECT * FROM members")
+        for member in members:
+            if not member[3]: #They haven't sent a message this week
+                update_score(-5, await self.bot.fetch_user(member[0]), self.bot.get_channel(505589070378958850))
+
+        db.execute(f"UPDATE members SET hasSentMessage = FALSE") #Set all members back to false
 
     @command(name="rules")
     async def rules(self, ctx):
@@ -92,7 +105,7 @@ class General(Cog):
             if not member.bot:
                 score = db.record(f"SELECT score, level FROM members WHERE id = {member.id}")
                 if score:
-                    ranked_list.append([member.name, score[0], score[1]]) #not sure why it's a tuple
+                    ranked_list.append([member.name, score[0], score[1] if score[1] > -1 and score[1] < 7 else ("N" if score[1] == -1 else "S")]) #not sure why it's a tuple
                 else: #add member to list if they aren't in the database for some reason
                     add_user(member.id, 1000)
                     score = db.record(f"SELECT score, level FROM members WHERE id = {member.id}")
@@ -100,7 +113,7 @@ class General(Cog):
 
         ranked_list = sorted(ranked_list, key=lambda item: item[1], reverse=True)
         output = t2a(
-            header = ["Member", "Score", "Level"],
+            header = ["Member", "Score", "Tier"],
             body = ranked_list,
             style=PresetStyle.thin_compact
         )
@@ -110,11 +123,12 @@ class General(Cog):
     async def updatescore(self, ctx, num, member: Member):
         try:
             if ctx.author.id in credit_score_mods:
-                score = update_score(int(num), member)
+                score = await update_score(int(num), member, ctx.channel)
                 await send_message(ctx.channel, f"{member.name}'s score is now {str(score)}!")
             else:
                 await send_message(ctx.channel, "You must be a moderator of John Xina's army to use this command")
         except Exception as e:
+            print("sugma")
             print(e)
 
     @command(name="ratio")
@@ -132,14 +146,14 @@ class General(Cog):
                     message_1 = db.record(f"SELECT * FROM messages WHERE id = {ctx.message.id}")
                     if message_1:
                         db.execute(f"UPDATE members SET score = score - {message_1[2]} WHERE id = {ctx.author.id}")
-                        db.execute(f"UPDATE messages SET points_awarded = -1 WHERE id = {ctx.message.id}")
+                        db.execute(f"UPDATE messages SET points_awarded = NULL WHERE id = {ctx.message.id}")
                     else:
                         db.execute(f"INSERT INTO messages VALUES ({ctx.message.id}, {ctx.author.id}, -1)")
 
                     message_2 = db.record(f"SELECT * FROM messages WHERE id = {ctx.message.reference.message_id}")
                     if message_2:
                         db.execute(f"UPDATE members SET score = score - {message_2[2]} WHERE id = {ctx.message.reference.resolved.author.id}") #?????? could be wrong
-                        db.execute(f"UPDATE messages SET points_awarded = -1 WHERE id = {ctx.message.reference.message_id}")
+                        db.execute(f"UPDATE messages SET points_awarded = NULL WHERE id = {ctx.message.reference.message_id}")
                     else:
                         db.execute(f"INSERT INTO messages VALUES ({ctx.message.reference.message_id}, {ctx.message.reference.resolved.author.id}, -1)")
                 else:
@@ -161,12 +175,12 @@ class General(Cog):
         net = upvotes - downvotes
         print(net)
         if net > 1:
-            update_score(reaction_scaling[net], message.author)
-            update_score(-1 * reaction_scaling[net], message.reference.resolved.author)
+            await update_score(reaction_scaling[net], message.author, channel)
+            await update_score(-1 * reaction_scaling[net], message.reference.resolved.author, channel)
             await send_message(channel, f"{message.author.name} ratioed {message.reference.resolved.author.name} and gained {str(reaction_scaling[net])} social credit! {message.reference.resolved.author.name} lost {str(reaction_scaling[net])} social credit")
         elif net < -1:
-            update_score(-1 * reaction_scaling[abs(net)], message.author)
-            update_score(reaction_scaling[abs(net)], message.reference.resolved.author)
+            await update_score(-1 * reaction_scaling[abs(net)], message.author, channel)
+            await update_score(reaction_scaling[abs(net)], message.reference.resolved.author, channel)
             await send_message(channel, f"{message.author.name} failed to ratio {message.reference.resolved.author.name} and lost {str(reaction_scaling[abs(net)])} social credit! {message.reference.resolved.author.name} gained {str(reaction_scaling[abs(net)])} social credit!")
 
         else:
@@ -178,38 +192,52 @@ class General(Cog):
     @Cog.listener("on_message")
     async def on_message(self, message):
         if re.search("(jonah)", message.content, re.IGNORECASE):
-            update_score(-5, message.author)
+            await update_score(-5, message.author, message.channel)
             await send_message(message.channel, "Oh no, you said the bad word, -5 social credit")
+
+        db.execute(f"UPDATE members SET hasSentMessage = TRUE WHERE id = {message.author.id}")
 
     @Cog.listener()
     async def on_reaction_add(self, reaction, user):
         if not user.bot:
             message = reaction.message
-            prev_score = None
+            prev_score = 0
 
             try:
                 prev_score = db.record(f"SELECT * FROM messages WHERE id = {message.id}")[2]
             except:
                 print("no record found")
 
-            if prev_score != -1: #If the score is -1, then this message is disabled (It might be part of a 'ratio' or something else)
-                highest_reaction_count = 0
+            if prev_score != None: #If the score is None, then this message is disabled (It might be part of a 'ratio' or something else)
+                highest_pos_reaction_count = 0
+                highest_neg_reaction_count = 0
                 for item in message.reactions: #find the highest number of rt's, true's, or tjbased's
                     try:
-                        if "rt" == item.emoji.name or "TRUE" == item.emoji.name or "tjbased" == item.emoji.name:
-                            if item.count > highest_reaction_count:
-                                highest_reaction_count = item.count
+                        if item.emoji.name in good_reactions:
+                            if item.count > highest_pos_reaction_count:
+                                highest_pos_reaction_count = item.count
+                        elif item.emoji.name in bad_reactions:
+                            if item.count > highest_neg_reaction_count:
+                                highest_neg_reaction_count = item.count
+
                     except:
                         print("emoji not found")
 
-                if highest_reaction_count: #Update the user's score based on the reaction_scaling table
-                    if prev_score == None:
-                        db.execute(f"INSERT INTO messages VALUES ({message.id}, {message.author.id}, {reaction_scaling[highest_reaction_count-1]})")
+                net_reaction = highest_pos_reaction_count - highest_neg_reaction_count
+
+                if net_reaction > 0: #Update the user's score based on the reaction_scaling table
+                    if prev_score == 0:
+                        db.execute(f"INSERT INTO messages VALUES ({message.id}, {message.author.id}, {reaction_scaling[net_reaction-1]})")
                     else:
-                        db.execute(f"UPDATE messages SET points_awarded = {reaction_scaling[highest_reaction_count-1]} WHERE id = {message.id}")
-                        db.execute(f"UPDATE members SET score = score + {reaction_scaling[highest_reaction_count-1] - prev_score} WHERE id = {message.author.id}")
-
-
+                        db.execute(f"UPDATE messages SET points_awarded = {reaction_scaling[net_reaction-1]} WHERE id = {message.id}")
+                        db.execute(f"UPDATE members SET score = score + {reaction_scaling[net_reaction-1] - prev_score} WHERE id = {message.author.id}")
+                elif net_reaction < 0:
+                    if prev_score == 0:
+                        db.execute(f"INSERT INTO messages VALUES ({message.id}, {message.author.id}, {-1 * reaction_scaling[abs(net_reaction)-1]})")
+                    else:
+                        db.execute(f"UPDATE messages SET points_awarded = {-1 * reaction_scaling[abs(net_reaction)-1]} WHERE id = {message.id}")
+                        db.execute(f"UPDATE members SET score = score + {(-1 * reaction_scaling[abs(net_reaction)-1]) - prev_score} WHERE id = {message.author.id}")
+                print(net_reaction)
 
     @Cog.listener()
     async def on_ready(self):
@@ -224,15 +252,22 @@ def add_user(id, score):
     db.execute(f"INSERT INTO members VALUES({id}, {score}, 3)")
 
 
-def update_score(num, member):
+async def update_score(num, member, channel):
     if not member.bot:
         record = db.record(f"SELECT score, level FROM members WHERE id = {member.id}")
         if record:
             db.execute(f"UPDATE members SET score= score + {num} WHERE id = {member.id}")
+            if (record[0] + num) > levels[int(record[1])][1]: #Check if the user has leveld up
+                db.execute(f"UPDATE members SET level = level + 1 WHERE id = {member.id}")
+                await send_message(channel, f"BING CHILLING! {member.name} has moved up to tier {str(int(record[1]) + 1)}!") #send a message for level up
+            elif (record[0] + num) < levels[int(record[1])][0]:
+                db.execute(f"UPDATE members SET level = level - 1 WHERE id = {member.id}")
+                await send_message(channel, f"{member.name} has disrespected their famiry and moved down to tier {str(int(record[1] - 1))}.")
             return record[0] + num
         else:
             add_user(member.id, 1000+num)
             return (1000+num)
+
 
 async def send_message(channel, message):
     if db.record(f"SELECT mandarinEnabled FROM guilds WHERE guildID = {channel.guild.id}")[0]:
