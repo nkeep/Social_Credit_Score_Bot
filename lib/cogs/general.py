@@ -1,4 +1,5 @@
 from discord import Member, ChannelType, File
+from discord.enums import AuditLogAction
 from discord.ext.commands import Cog
 from discord.ext.commands import command, has_permissions
 from table2ascii import table2ascii as t2a, PresetStyle
@@ -81,6 +82,7 @@ class General(Cog):
             rules = db.records(f"SELECT * FROM rules WHERE value > 0") + db.records(f"SELECT * FROM rules WHERE value < 0")
             print(rules)
             rule = rules[int(num)-1][1]
+            rule = rule.replace("'", r"\'")
             db.execute(f"DELETE FROM rules WHERE rule = '{rule}'")
             await send_message(ctx.channel, "Successfully removed rule")
         except Exception as e:
@@ -128,7 +130,6 @@ class General(Cog):
             else:
                 await send_message(ctx.channel, "You must be a moderator of John Xina's army to use this command")
         except Exception as e:
-            print("sugma")
             print(e)
 
     @command(name="ratio")
@@ -188,6 +189,12 @@ class General(Cog):
 
         self.bot.scheduler.remove_job(str(message.id))
 
+    # @Cog.listener("on_message_delete")
+    # async def on_message_delete(self, message):
+    #     async for entry in message.guild.audit_logs(limit=1, oldest_first=False):
+    #         if "message_delete" in entry.action:
+    #             if not (message.channel.id == 505589070378958850 and message.author.bot): #Only don't dock for deleting bot messages in the bot channel
+    #                 print("dock points here")
 
     @Cog.listener("on_message")
     async def on_message(self, message):
