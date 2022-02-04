@@ -30,7 +30,7 @@ reaction_scaling = [0,1,1,2,3,5,8,13,21,34,55,89,144,233]
 good_reactions = ["rt", "TRUE", "tjbased", "LOGGERS", "TJ"]
 bad_reactions = ["yaok", "yikes", "garbageTake", "papa", "dooziernotfunny"]
 
-levels = {-1:[-math.inf,299], 0:[300,499], 1:[500,699], 2:[700,899], 3:[900,1099], 4:[1100, 1299], 5:[1300, 1499], 6:[1500,1699], 7:[1700, math.inf]}
+levels = {-1:[-math.inf,649], 0:[650,749], 1:[750,849], 2:[850,949], 3:[950,1049], 4:[1050, 1149], 5:[1150, 1249], 6:[1250,1349], 7:[1350, math.inf]}
 
 translator = Translator()
 
@@ -83,7 +83,7 @@ class General(Cog):
             print(rules)
             rule = rules[int(num)-1][1]
             rule = rule.replace("'", r"\'")
-            db.execute(f"DELETE FROM rules WHERE rule = '{rule}'")
+            db.execute(f"DELETE FROM rules WHERE rule = E'{rule}'")
             await send_message(ctx.channel, "Successfully removed rule")
         except Exception as e:
             print(e)
