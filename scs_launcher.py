@@ -1,6 +1,6 @@
 from lib.bot import bot
 
-VERSION = "1.1"
+VERSION = "1.5"
 
 bot.run(VERSION)
 
@@ -9,3 +9,4 @@ bot.run(VERSION)
 #1.2    Add rules commands (rules, addrule, removerule)
 #1.3    Added togglemandarin command
 #1.4    Add negative reactions removing score, level ranges, and weekly message checker
+#1.5    restrict +funny channels, restrict channels that rules and scores commands can be used in, and make addrule and removerule mod only

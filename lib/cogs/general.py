@@ -29,6 +29,8 @@ credit_score_mods = [143919895694802944, #Nate Keep
 reaction_scaling = [0,1,1,2,3,5,8,13,21,34,55,89,144,233]
 good_reactions = ["rt", "TRUE", "tjbased", "LOGGERS", "TJ"]
 bad_reactions = ["yaok", "yikes", "garbageTake", "papa", "dooziernotfunny"]
+funny_channels = [220180534129590273]
+bot_channels = [505589070378958850, 871493456021835797]
 
 levels = {-1:[-math.inf,649], 0:[650,749], 1:[750,849], 2:[850,949], 3:[950,1049], 4:[1050, 1149], 5:[1150, 1249], 6:[1250,1349], 7:[1350, math.inf]}
 
@@ -50,43 +52,53 @@ class General(Cog):
 
     @command(name="rules")
     async def rules(self, ctx):
-        try:
-            pos_rules = db.records(f"SELECT * FROM rules WHERE value > 0")
-            neg_rules = db.records(f"SELECT * FROM rules WHERE value < 0")
-            text = "DOs: \n"
-            for i in range(len(pos_rules)):
-                text += str(i+1) + ". " + "+" + str(pos_rules[i][0]) + " " + pos_rules[i][1] + "\n"
+        if ctx.channel.id in bot_channels:
+            try:
+                pos_rules = db.records(f"SELECT * FROM rules WHERE value > 0")
+                neg_rules = db.records(f"SELECT * FROM rules WHERE value < 0")
+                text = "DOs: \n"
+                for i in range(len(pos_rules)):
+                    text += str(i+1) + ". " + "+" + str(pos_rules[i][0]) + " " + pos_rules[i][1] + "\n"
 
-            text += "DON'Ts: \n"
+                text += "DON'Ts: \n"
 
-            for j in range(len(neg_rules)):
-                text += str(i+2+j) + ". " + str(neg_rules[j][0]) + " " + neg_rules[j][1] + "\n"
+                for j in range(len(neg_rules)):
+                    text += str(i+2+j) + ". " + str(neg_rules[j][0]) + " " + neg_rules[j][1] + "\n"
 
-            await ctx.send(f"```{text}```")
-        except Exception as e:
-            print(e)
+                await ctx.send(f"```{text}```")
+            except Exception as e:
+                print(e)
+        else:
+            await update_score(-2, ctx.author, ctx.channel)
+            await send_message(ctx.channel, "You can only use this command in the bot channel. You lost 2 social credit.")
 
     @command(name="addrule")
     async def add_rule(self, ctx, value, *, rule):
-        try:
-            if value != 0 and int(value) >= -30 and int(value) <= 30:
-                rule = rule.replace("'", r"\'")
-                db.execute(f"INSERT INTO RULES(value, rule) VALUES({int(value)}, E'{rule}')")
-                await send_message(ctx.channel, "Successfully added rule")
-        except Exception as e:
-            await send_message(ctx.channel, "Invalid point value")
+        if ctx.author.id in credit_score_mods:
+            try:
+                if value != 0 and int(value) >= -30 and int(value) <= 30:
+                    rule = rule.replace("'", r"\'")
+                    db.execute(f"INSERT INTO RULES(value, rule) VALUES({int(value)}, E'{rule}')")
+                    await send_message(ctx.channel, "Successfully added rule")
+            except Exception as e:
+                await send_message(ctx.channel, "Invalid point value")
+            else:
+                await send_message(ctx.channel, "You must be a mod to add a rule")
 
     @command(name="removerule")
     async def remove_rule(self, ctx, num):
-        try:
-            rules = db.records(f"SELECT * FROM rules WHERE value > 0") + db.records(f"SELECT * FROM rules WHERE value < 0")
-            print(rules)
-            rule = rules[int(num)-1][1]
-            rule = rule.replace("'", r"\'")
-            db.execute(f"DELETE FROM rules WHERE rule = E'{rule}'")
-            await send_message(ctx.channel, "Successfully removed rule")
-        except Exception as e:
-            print(e)
+        if ctx.author.id in credit_score_mods:
+            try:
+                rules = db.records(f"SELECT * FROM rules WHERE value > 0") + db.records(f"SELECT * FROM rules WHERE value < 0")
+                print(rules)
+                rule = rules[int(num)-1][1]
+                rule = rule.replace("'", r"\'")
+                db.execute(f"DELETE FROM rules WHERE rule = E'{rule}'")
+                await send_message(ctx.channel, "Successfully removed rule")
+            except Exception as e:
+                print(e)
+        else:
+            await send_message(ctx.channel, "You must be a mod to remove a rule")
 
     @command(name="togglemandarin")
     async def toggle_mandarin(self, ctx):
@@ -101,25 +113,29 @@ class General(Cog):
 
     @command(name="scores")
     async def scores(self, ctx):
-        members = ctx.guild.members
-        ranked_list = []
-        for member in members:
-            if not member.bot:
-                score = db.record(f"SELECT score, level FROM members WHERE id = {member.id}")
-                if score:
-                    ranked_list.append([member.name, score[0], score[1] if score[1] > -1 and score[1] < 7 else ("N" if score[1] == -1 else "S")]) #not sure why it's a tuple
-                else: #add member to list if they aren't in the database for some reason
-                    add_user(member.id, 1000)
+        if ctx.channel.id in bot_channels:
+            members = ctx.guild.members
+            ranked_list = []
+            for member in members:
+                if not member.bot:
                     score = db.record(f"SELECT score, level FROM members WHERE id = {member.id}")
-                    ranked_list.append([member.name, score[0], score[1]]) #not sure why it's a tuple
+                    if score:
+                        ranked_list.append([member.name, score[0], score[1] if score[1] > -1 and score[1] < 7 else ("N" if score[1] == -1 else "S")]) #not sure why it's a tuple
+                    else: #add member to list if they aren't in the database for some reason
+                        add_user(member.id, 1000)
+                        score = db.record(f"SELECT score, level FROM members WHERE id = {member.id}")
+                        ranked_list.append([member.name, score[0], score[1]]) #not sure why it's a tuple
 
-        ranked_list = sorted(ranked_list, key=lambda item: item[1], reverse=True)
-        output = t2a(
-            header = ["Member", "Score", "Tier"],
-            body = ranked_list,
-            style=PresetStyle.thin_compact
-        )
-        await ctx.send(f"```\n{output}\n```")
+            ranked_list = sorted(ranked_list, key=lambda item: item[1], reverse=True)
+            output = t2a(
+                header = ["Member", "Score", "Tier"],
+                body = ranked_list,
+                style=PresetStyle.thin_compact
+            )
+            await ctx.send(f"```\n{output}\n```")
+        else:
+            await update_score(-2, ctx.author, ctx.channel)
+            await send_message(ctx.channel, "You can only use this command in the bot channel. You lost 2 social credit.")
 
     @command(name="updatescore", aliases=["addscore", "subtractscore"])
     async def updatescore(self, ctx, num, member: Member):
@@ -201,6 +217,9 @@ class General(Cog):
         if re.search("(jonah)", message.content, re.IGNORECASE):
             await update_score(-5, message.author, message.channel)
             await send_message(message.channel, "Oh no, you said the bad word, -5 social credit")
+        if re.search("^\+funny", message.content) and message.channel.id not in funny_channels and message.channel.id not in bot_channels:
+            await update_score(-2, message.author, message.channel)
+            await send_message(message.channel, "You can't use +funny in this channel. You lost 2 social credit.")
 
         db.execute(f"UPDATE members SET hasSentMessage = TRUE WHERE id = {message.author.id}")
 
