@@ -139,10 +139,11 @@ class General(Cog):
             await send_message(ctx.channel, "You can only use this command in the bot channel. You lost 2 social credit.")
 
     @command(name="updatescore", aliases=["addscore", "subtractscore"])
-    async def updatescore(self, ctx, num, member: Member):
+    async def updatescore(self, ctx, num, member: Member, * , reason):
         try:
             if ctx.author.id in credit_score_mods:
                 score = await update_score(int(num), member, ctx.channel)
+                db.execute(f"INSERT INTO audit_log VALUES ({ctx.author.id}, {member.id}, {int(num)}, '{reason}')")
                 await send_message(ctx.channel, f"{member.name}'s score is now {str(score)}!")
             else:
                 await send_message(ctx.channel, "You must be a moderator of John Xina's army to use this command")
@@ -219,7 +220,7 @@ class General(Cog):
             if re.search("(jonah)", message.content, re.IGNORECASE):
                 await update_score(-5, message.author, message.channel)
                 await send_message(message.channel, "Oh no, you said the bad word, -5 social credit")
-            if re.search("^\+funny", message.content) and message.channel.id not in funny_channels and message.channel.id not in bot_channels:
+            if re.search("^\+funny$", message.content) and message.channel.id not in funny_channels and message.channel.id not in bot_channels:
                 await update_score(-2, message.author, message.channel)
                 await send_message(message.channel, "You can't use +funny in this channel. You lost 2 social credit.")
             if message.channel.id == mod_channel and message.author.id not in credit_score_mods:

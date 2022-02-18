@@ -21,3 +21,11 @@ CREATE TABLE IF NOT EXISTS rules(
 	value int,
 	rule text PRIMARY KEY
 );
+
+CREATE TABLE IF NOT EXISTS audit_log(
+	moderator bigint,
+	offender bigint,
+	points int,
+	reason text,
+	date text DEFAULT CURRENT_TIMESTAMP
+);
