@@ -11,3 +11,4 @@ bot.run(VERSION)
 #1.4    Add negative reactions removing score, level ranges, and weekly message checker
 #1.5    restrict +funny channels, restrict channels that rules and scores commands can be used in, and make addrule and removerule mod only
 #1.6    Added audit_log for update_score command
+#1.7    Made it so reactions to your own messages don't count

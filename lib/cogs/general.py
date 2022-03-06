@@ -83,8 +83,8 @@ class General(Cog):
                     await send_message(ctx.channel, "Successfully added rule")
             except Exception as e:
                 await send_message(ctx.channel, "Invalid point value")
-            else:
-                await send_message(ctx.channel, "You must be a mod to add a rule")
+        else:
+            await send_message(ctx.channel, "You must be a mod to add a rule")
 
     @command(name="removerule")
     async def remove_rule(self, ctx, num):
@@ -121,7 +121,7 @@ class General(Cog):
                 if not member.bot:
                     score = db.record(f"SELECT score, level FROM members WHERE id = {member.id}")
                     if score:
-                        ranked_list.append([member.name, score[0], score[1] if score[1] > -1 and score[1] < 7 else ("N" if score[1] == -1 else "S")]) #not sure why it's a tuple
+                        ranked_list.append([member.name, score[0], score[1] if score[1] > -1 and score[1] < 7 else ("N" if score[1] == -1 else "S")])
                     else: #add member to list if they aren't in the database for some reason
                         add_user(member.id, 1000)
                         score = db.record(f"SELECT score, level FROM members WHERE id = {member.id}")
@@ -243,14 +243,26 @@ class General(Cog):
             if prev_score != None: #If the score is None, then this message is disabled (It might be part of a 'ratio' or something else)
                 highest_pos_reaction_count = 0
                 highest_neg_reaction_count = 0
-                for item in message.reactions: #find the highest number of rt's, true's, or tjbased's
+                for item in message.reactions: #find the highest number of good and bad reactions
                     try:
                         if item.emoji.name in good_reactions:
-                            if item.count > highest_pos_reaction_count:
-                                highest_pos_reaction_count = item.count
+                            users = await item.users().flatten()
+                            ids = [x.id for x in users]
+                            if message.author.id in ids:
+                                count = item.count -1
+                            else:
+                                count = item.count
+                            if count > highest_pos_reaction_count:
+                                highest_pos_reaction_count = count
                         elif item.emoji.name in bad_reactions:
-                            if item.count > highest_neg_reaction_count:
-                                highest_neg_reaction_count = item.count
+                            users = await item.users().flatten()
+                            ids = [x.id for x in users]
+                            if message.author.id in ids:
+                                count = item.count -1
+                            else:
+                                count = item.count
+                            if count > highest_neg_reaction_count:
+                                highest_neg_reaction_count = count
 
                     except:
                         print("emoji not found")
