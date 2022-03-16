@@ -161,20 +161,20 @@ class General(Cog):
                     future = now + timedelta(hours=2)
                     # future = now + timedelta(minutes=1)
                     job = self.bot.scheduler.add_job(self.determine_ratio, CronTrigger(month=future.month, day=future.day, hour=future.hour, minute=future.minute), [ctx.channel, ctx.message.id], id=str(ctx.message.id))
-                    #Remove any scores previously gained from these messages and set the points awarded to -1
+                    #Remove any scores previously gained from these messages and set the points awarded to NULL
                     message_1 = db.record(f"SELECT * FROM messages WHERE id = {ctx.message.id}")
                     if message_1:
                         db.execute(f"UPDATE members SET score = score - {message_1[2]} WHERE id = {ctx.author.id}")
                         db.execute(f"UPDATE messages SET points_awarded = NULL WHERE id = {ctx.message.id}")
                     else:
-                        db.execute(f"INSERT INTO messages VALUES ({ctx.message.id}, {ctx.author.id}, -1)")
+                        db.execute(f"INSERT INTO messages VALUES ({ctx.message.id}, {ctx.author.id}, NULL)")
 
                     message_2 = db.record(f"SELECT * FROM messages WHERE id = {ctx.message.reference.message_id}")
                     if message_2:
                         db.execute(f"UPDATE members SET score = score - {message_2[2]} WHERE id = {ctx.message.reference.resolved.author.id}") #?????? could be wrong
                         db.execute(f"UPDATE messages SET points_awarded = NULL WHERE id = {ctx.message.reference.message_id}")
                     else:
-                        db.execute(f"INSERT INTO messages VALUES ({ctx.message.reference.message_id}, {ctx.message.reference.resolved.author.id}, -1)")
+                        db.execute(f"INSERT INTO messages VALUES ({ctx.message.reference.message_id}, {ctx.message.reference.resolved.author.id}, NULL)")
                 else:
                     await send_message(ctx.channel, "You cannot ratio yourself or a bot")
 
@@ -238,7 +238,7 @@ class General(Cog):
             try:
                 prev_score = db.record(f"SELECT * FROM messages WHERE id = {message.id}")[2]
             except:
-                db.execute(f"INSERT INTO messages VALUES ({message.id}, 0)")
+                db.execute(f"INSERT INTO messages VALUES ({message.id}, {message.author.id}, 0)")
 
             if prev_score != None: #If the score is None, then this message is disabled (It might be part of a 'ratio' or something else)
                 highest_pos_reaction_count = 0
@@ -248,6 +248,7 @@ class General(Cog):
                         if item.emoji.name in good_reactions:
                             users = await item.users().flatten()
                             ids = [x.id for x in users]
+                            count = 0
                             if message.author.id in ids:
                                 count = item.count -1
                             else:
@@ -257,6 +258,7 @@ class General(Cog):
                         elif item.emoji.name in bad_reactions:
                             users = await item.users().flatten()
                             ids = [x.id for x in users]
+                            count = 0
                             if message.author.id in ids:
                                 count = item.count -1
                             else:
