@@ -132,7 +132,8 @@ class Bot(BotBase):
 
     async def on_message(self, message):
         if not message.author.bot: #ignores other bots
-            await self.process_commands(message)
+            if not message.author.id == 143865454212022272 and not message.author.id == 144630299353939968:
+                await self.process_commands(message)
 
     async def on_guild_join(self, guild): #Add all members to the guild on guild join
         for member in guild.members:

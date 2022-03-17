@@ -144,7 +144,7 @@ class General(Cog):
             if ctx.author.id in credit_score_mods:
                 score = await update_score(int(num), member, ctx.channel)
                 db.execute(f"INSERT INTO audit_log VALUES ({ctx.author.id}, {member.id}, {int(num)}, '{reason}')")
-                await send_message(ctx.channel, f"{member.name}'s score is now {str(score)}!")
+                await send_message(ctx.channel, f"{member.name}'s score is now {str(max(0,score))}!")
             else:
                 await send_message(ctx.channel, "You must be a moderator of John Xina's army to use this command")
         except Exception as e:
@@ -164,14 +164,16 @@ class General(Cog):
                     #Remove any scores previously gained from these messages and set the points awarded to NULL
                     message_1 = db.record(f"SELECT * FROM messages WHERE id = {ctx.message.id}")
                     if message_1:
-                        db.execute(f"UPDATE members SET score = score - {message_1[2]} WHERE id = {ctx.author.id}")
+                        await update_score(-1*message_1[2], ctx.message.author, ctx.channel)
+                        #db.execute(f"UPDATE members SET score = score - {message_1[2]} WHERE id = {ctx.author.id}")
                         db.execute(f"UPDATE messages SET points_awarded = NULL WHERE id = {ctx.message.id}")
                     else:
                         db.execute(f"INSERT INTO messages VALUES ({ctx.message.id}, {ctx.author.id}, NULL)")
 
                     message_2 = db.record(f"SELECT * FROM messages WHERE id = {ctx.message.reference.message_id}")
                     if message_2:
-                        db.execute(f"UPDATE members SET score = score - {message_2[2]} WHERE id = {ctx.message.reference.resolved.author.id}") #?????? could be wrong
+                        await update_score(-1*message_2[2], ctx.message.reference.resolved.author, ctx.channel)
+                        #db.execute(f"UPDATE members SET score = score - {message_2[2]} WHERE id = {ctx.message.reference.resolved.author.id}") #?????? could be wrong
                         db.execute(f"UPDATE messages SET points_awarded = NULL WHERE id = {ctx.message.reference.message_id}")
                     else:
                         db.execute(f"INSERT INTO messages VALUES ({ctx.message.reference.message_id}, {ctx.message.reference.resolved.author.id}, NULL)")
@@ -273,10 +275,12 @@ class General(Cog):
 
                 if net_reaction > 0: #Update the user's score based on the reaction_scaling table
                     db.execute(f"UPDATE messages SET points_awarded = {reaction_scaling[net_reaction-1]} WHERE id = {message.id}")
-                    db.execute(f"UPDATE members SET score = score + {reaction_scaling[net_reaction-1] - prev_score} WHERE id = {message.author.id}")
+                    #db.execute(f"UPDATE members SET score = score + {reaction_scaling[net_reaction-1] - prev_score} WHERE id = {message.author.id}")
+                    await update_score(reaction_scaling[net_reaction-1] - prev_score, message.author, message.channel)
                 elif net_reaction < 0:
                     db.execute(f"UPDATE messages SET points_awarded = {-1 * reaction_scaling[abs(net_reaction)-1]} WHERE id = {message.id}")
-                    db.execute(f"UPDATE members SET score = score + {(-1 * reaction_scaling[abs(net_reaction)-1]) - prev_score} WHERE id = {message.author.id}")
+                    #db.execute(f"UPDATE members SET score = score + {(-1 * reaction_scaling[abs(net_reaction)-1]) - prev_score} WHERE id = {message.author.id}")
+                    await update_score((-1 * reaction_scaling[abs(net_reaction)-1]) - prev_score, message.author, message.channel)
                 print(net_reaction)
 
     @Cog.listener()
@@ -297,6 +301,9 @@ async def update_score(num, member, channel):
         record = db.record(f"SELECT score, level FROM members WHERE id = {member.id}")
         if record:
             db.execute(f"UPDATE members SET score= score + {num} WHERE id = {member.id}")
+            score = db.record(f"SELECT score FROM members WHERE id = {member.id}")
+            if score[0] < 0: #Force 0 to be the lowest score
+                db.execute(f"UPDATE members SET score = 0 WHERE id = {member.id}")
             if (record[0] + num) > levels[int(record[1])][1]: #Check if the user has leveld up
                 db.execute(f"UPDATE members SET level = level + 1 WHERE id = {member.id}")
                 await send_message(channel, f"BING CHILLING! {member.name} has moved up to tier {str(int(record[1]) + 1)}!") #send a message for level up

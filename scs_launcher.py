@@ -1,6 +1,6 @@
 from lib.bot import bot
 
-VERSION = "1.5"
+VERSION = "1.8"
 
 bot.run(VERSION)
 
@@ -12,3 +12,4 @@ bot.run(VERSION)
 #1.5    restrict +funny channels, restrict channels that rules and scores commands can be used in, and make addrule and removerule mod only
 #1.6    Added audit_log for update_score command
 #1.7    Made it so reactions to your own messages don't count
+#1.8    Made it so 0 is the lowest score you can have
