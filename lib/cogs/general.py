@@ -289,8 +289,8 @@ class General(Cog):
             self.bot.cogs_ready.ready_up("general")
 
 
-def setup(bot):
-	bot.add_cog(General(bot))
+async def setup(bot):
+	await bot.add_cog(General(bot))
 
 def add_user(id, score):
     db.execute(f"INSERT INTO members VALUES({id}, {score}, 3)")

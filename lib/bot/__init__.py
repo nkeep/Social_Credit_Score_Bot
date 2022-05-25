@@ -10,8 +10,10 @@ from discord.ext.commands import when_mentioned_or, command, has_permissions
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 import os
+import discord
 
 from ..db import db
+from ..groups import sc as slashsc
 
 
 from config import token, default_prefix, path_separator
@@ -63,17 +65,22 @@ class Bot(BotBase):
         intents=Intents.all(),
         )
 
-    def setup(self):
+    async def setup(self):
         print(COGS)
         for cog in COGS:
-            self.load_extension(f"lib.cogs.{cog}")
+            await self.load_extension(f"lib.cogs.{cog}")
             print(f"{cog} cog loaded")
         print("setup complete")
 
+        self.tree.add_command(slashsc.sc(self), guild=discord.Object(id=533019434491576323))
+        self.tree.add_command(slashsc.sc(self), guild=discord.Object(id=220180151315595264))
+
+        await self.tree.sync(guild=discord.Object(id=533019434491576323))
+        await self.tree.sync(guild=discord.Object(id=220180151315595264))
+
     def run(self, version):
         self.VERSION = version
-        print("running setup")
-        self.setup()
+
 
         self.TOKEN = token
 
@@ -84,6 +91,8 @@ class Bot(BotBase):
         pass
 
     async def on_connect(self):
+        print("running setup")
+        await self.setup()
         print("bot connected")
 
     async def on_disconnect(self):

@@ -1,6 +1,6 @@
 from lib.bot import bot
 
-VERSION = "1.8"
+VERSION = "1.9"
 
 bot.run(VERSION)
 
@@ -13,3 +13,4 @@ bot.run(VERSION)
 #1.6    Added audit_log for update_score command
 #1.7    Made it so reactions to your own messages don't count
 #1.8    Made it so 0 is the lowest score you can have
+#1.9    Update to latest discord.py (beta slash commands)
